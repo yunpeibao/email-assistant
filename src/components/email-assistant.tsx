@@ -8,19 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Mail, Send, Copy, ArrowLeft } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar as CalendarIcon } from 'lucide-react'; 
 
 // 定义类型接口
-interface CollaborationType {
-  duration?: string;
-  unit?: string;
-}
-
-interface CollaborationValue {
-  checked: boolean;
-  duration?: string;
-}
-
 interface DateRange {
   start: string;
   end: string;
@@ -33,7 +22,7 @@ interface FormData {
   playStoreLink: string;
   recipient: string;
   senderName: string;
-  collaborationTypes: Record<string, CollaborationValue>;
+  collaborationTypes: Record<string, { checked: boolean; duration?: string }>;
   dateRange: DateRange;
   influencerName: string;
   userName: string;
@@ -42,7 +31,7 @@ interface FormData {
 }
 
 // 合作形式选项
-const getCollaborationOptions = (platforms: string[]) => {
+const getCollaborationOptions = (platforms: string[]): Record<string, { duration: boolean; unit?: string }> => {
   const options: Record<string, { duration: boolean; unit?: string }> = {
     'UGC': { duration: true, unit: '月' },
     'biolink': { duration: true, unit: '天' },
@@ -75,16 +64,16 @@ const getCollaborationOptions = (platforms: string[]) => {
 
 // 邮件模板
 const emailTemplates = {
-  initial: (data: FormData) => {
+  initial: (data: FormData): string => {
     const collaborationText = Object.entries(data.collaborationTypes)
-  .filter(([_, value]) => value.checked)
-  .map(([type, value]) => {
-    if (value.duration) {
-      return `${value.duration || '1'}* ${type}`;
-    }
-    return `1* ${type}`;
-  })
-  .join(' + ');
+      .filter(([, value]) => value.checked)
+      .map(([type, value]) => {
+        if (value.duration) {
+          return `${value.duration || '1'}* ${type}`;
+        }
+        return `1* ${type}`;
+      })
+      .join(' + ');
 
     const dateText = data.dateRange.start === data.dateRange.end ? 
       data.dateRange.start : 
@@ -111,7 +100,7 @@ Really hope to get your reply!
 Best regards,
 ${data.senderName}`;
   },
-  followup: (data: FormData) => `Dear ${data.influencerName},
+  followup: (data: FormData): string => `Dear ${data.influencerName},
 
 I hope you're doing well. I'm following up on my previous email regarding our collaboration opportunity.
 
@@ -121,7 +110,7 @@ Looking forward to hearing from you.
 
 Best regards,
 ${data.userName}`,
-  negotiation: (data: FormData) => `Dear ${data.influencerName},
+  negotiation: (data: FormData): string => `Dear ${data.influencerName},
 
 Thank you for sharing your rate card and showing interest in our collaboration opportunity.
 
@@ -133,7 +122,7 @@ Would you be open to discussing this adjusted proposal?
 
 Best regards,
 ${data.userName}`,
-  rejection: (data: FormData) => `Dear ${data.influencerName},
+  rejection: (data: FormData): string => `Dear ${data.influencerName},
 
 Thank you for your interest and for providing your collaboration terms.
 
@@ -149,11 +138,6 @@ const EmailAssistant = () => {
   const [scenario, setScenario] = useState('initial');
   const [showEmail, setShowEmail] = useState(false);
   const [emailContent, setEmailContent] = useState('');
-  const inputClassName = "mt-1 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100";
-  const labelClassName = "text-gray-900 dark:text-gray-100";
-  const cardClassName = "w-full max-w-4xl mx-auto bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800";
-  const selectClassName = "w-full border rounded p-2 mt-1 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-100";
-  const checkboxLabelClassName = "flex items-center p-2 border rounded hover:bg-gray-50 dark:hover:bg-gray-900 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950";
   
   const [formData, setFormData] = useState<FormData>({
     platforms: [],
@@ -171,7 +155,7 @@ const EmailAssistant = () => {
 
   const platforms = ['YouTube', 'TikTok', 'Instagram', 'Twitch'];
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: string, value: unknown) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -192,23 +176,29 @@ const EmailAssistant = () => {
 
   if (showEmail) {
     return (
-      <Card className="w-full max-w-4xl mx-auto bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
+      <Card className="w-full max-w-4xl mx-auto bg-white dark:bg-gray-950">
         <CardHeader>
           <CardTitle className="flex justify-between items-center">
-            <span>生成的邮件</span>
-            <Button variant="outline" onClick={() => setShowEmail(false)}>
+            <span className="text-gray-900 dark:text-gray-100">生成的邮件</span>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowEmail(false)}
+              className="hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
               <ArrowLeft className="w-4 h-4 mr-2" />
               返回编辑
             </Button>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="border rounded p-4 bg-gray-50 dark:bg-gray-900 whitespace-pre-line text-gray-900 dark:text-gray-100">
+          <div className="border rounded p-4 bg-white dark:bg-gray-900 whitespace-pre-line text-gray-900 dark:text-gray-100">
             {emailContent}
           </div>
           <Button 
-            className="w-full"
-            onClick={() => navigator.clipboard.writeText(emailContent)}
+            className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
+            onClick={() => {
+              void navigator.clipboard.writeText(emailContent);
+            }}
           >
             <Copy className="w-4 h-4 mr-2" />
             复制到剪贴板
@@ -219,9 +209,9 @@ const EmailAssistant = () => {
   }
 
   return (
-    <Card className="w-full max-w-4xl mx-auto bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800">
+    <Card className="w-full max-w-4xl mx-auto bg-white dark:bg-gray-950">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
           <Mail className="w-6 h-6" />
           邮件助手
         </CardTitle>
@@ -230,12 +220,12 @@ const EmailAssistant = () => {
         <div className="space-y-6">
           {/* 场景选择 */}
           <div>
-            <Label>选择场景</Label>
+            <Label className="text-gray-900 dark:text-gray-100">选择场景</Label>
             <select
-  value={scenario}
-  onChange={(e) => setScenario(e.target.value)}
-  className="w-full border rounded p-2 mt-1 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-blue-500"
->
+              value={scenario}
+              onChange={(e) => setScenario(e.target.value)}
+              className="w-full border rounded p-2 mt-1 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-100"
+            >
               <option value="initial">首次建联</option>
               <option value="followup">追问回复</option>
               <option value="negotiation">价格谈判</option>
@@ -248,10 +238,10 @@ const EmailAssistant = () => {
             <div className="space-y-4">
               {/* 平台选择 */}
               <div className="space-y-2">
-                <Label>合作平台（可多选）</Label>
+                <Label className="text-gray-900 dark:text-gray-100">合作平台（可多选）</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {platforms.map(platform => (
-                    <label key={platform} className="flex items-center p-2 border rounded hover:bg-gray-50">
+                    <label key={platform} className="flex items-center p-2 border rounded hover:bg-gray-50 dark:hover:bg-gray-900 border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
                       <Checkbox
                         checked={formData.platforms.includes(platform)}
                         onCheckedChange={() => {
@@ -261,7 +251,7 @@ const EmailAssistant = () => {
                           handleChange('platforms', newPlatforms);
                         }}
                       />
-                      <span className="ml-2">{platform}</span>
+                      <span className="ml-2 text-gray-900 dark:text-gray-100">{platform}</span>
                     </label>
                   ))}
                 </div>
@@ -270,7 +260,7 @@ const EmailAssistant = () => {
               {/* 合作形式 */}
               {formData.platforms.length > 0 && (
                 <div className="space-y-2">
-                  <Label>合作形式</Label>
+                  <Label className="text-gray-900 dark:text-gray-100">合作形式</Label>
                   <div className="grid grid-cols-2 gap-4">
                     {Object.entries(getCollaborationOptions(formData.platforms)).map(([type, options]) => (
                       <div key={type} className="space-y-2">
@@ -279,14 +269,15 @@ const EmailAssistant = () => {
                             checked={formData.collaborationTypes[type]?.checked || false}
                             onCheckedChange={(checked) => handleCollaborationChange(type, !!checked)}
                           />
-                          <span className="ml-2">{type}</span>
+                          <span className="ml-2 text-gray-900 dark:text-gray-100">{type}</span>
                         </label>
-                        {options.duration && formData.collaborationTypes[type] && (
+                        {options.duration && formData.collaborationTypes[type]?.checked && (
                           <Input
                             type="text"
                             placeholder={`输入${options.unit}`}
+                            value={formData.collaborationTypes[type]?.duration || ''}
                             onChange={(e) => handleCollaborationChange(type, e.target.value, true)}
-                            className="mt-1"
+                            className="mt-1 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100"
                           />
                         )}
                       </div>
@@ -298,96 +289,85 @@ const EmailAssistant = () => {
               {/* 项目信息 */}
               <div className="space-y-4">
                 <div>
-                  <Label>项目描述</Label>
+                  <Label className="text-gray-900 dark:text-gray-100">项目描述</Label>
                   <Textarea
                     placeholder="请输入项目描述"
                     value={formData.projectDescription}
                     onChange={(e) => handleChange('projectDescription', e.target.value)}
-                    className="mt-1"
+                    className="mt-1 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <Label>游戏商店链接</Label>
+                  <Label className="text-gray-900 dark:text-gray-100">游戏商店链接</Label>
                   <Input
                     placeholder="请输入游戏商店链接"
                     value={formData.playStoreLink}
                     onChange={(e) => handleChange('playStoreLink', e.target.value)}
-                    className="mt-1"
+                    className="mt-1 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100"
                   />
                 </div>
               </div>
 
               {/* 日期选择 */}
               <div className="grid grid-cols-2 gap-4">
-  <div className="relative group">
-    <Label 
-      htmlFor="start-date" 
-      className={`${labelClassName} block`}
-    >
-      开始日期
-    </Label>
-    <div className="relative mt-1">
-      <Input
-        id="start-date"
-        type="date"
-        value={formData.dateRange.start}
-        onChange={(e) => handleChange('dateRange', {...formData.dateRange, start: e.target.value})}
-        className={`${inputClassName} pl-10 w-full`}
-      />
-      <CalendarIcon 
-        className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-500 cursor-pointer transition-colors"
-        onClick={() => {
-          document.getElementById('start-date')?.showPicker?.() || 
-          document.getElementById('start-date')?.click();
-        }}
-      />
-    </div>
-  </div>
-
-  <div className="relative group">
-    <Label 
-      htmlFor="end-date" 
-      className={`${labelClassName} block`}
-    >
-      结束日期
-    </Label>
-    <div className="relative mt-1">
-      <Input
-        id="end-date"
-        type="date"
-        value={formData.dateRange.end}
-        onChange={(e) => handleChange('dateRange', {...formData.dateRange, end: e.target.value})}
-        className={`${inputClassName} pl-10 w-full`}
-      />
-      <CalendarIcon 
-        className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-500 cursor-pointer transition-colors"
-        onClick={() => {
-          document.getElementById('end-date')?.showPicker?.() || 
-          document.getElementById('end-date')?.click();
-        }}
-      />
-    </div>
-  </div>
-</div>
+                <div>
+                  <Label className="text-gray-900 dark:text-gray-100">开始日期</Label>
+                  <div className="relative">
+                    <Input
+                      id="start-date"
+                      type="date"
+                      value={formData.dateRange.start}
+                      onChange={(e) => handleChange('dateRange', {...formData.dateRange, start: e.target.value})}
+                      className="pl-10 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100"
+                    />
+                    <Mail 
+                      className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-500 cursor-pointer transition-colors"
+                      onClick={() => {
+                        document.getElementById('start-date')?.showPicker?.() || 
+                        document.getElementById('start-date')?.click();
+                      }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-gray-900 dark:text-gray-100">结束日期</Label>
+                  <div className="relative">
+                    <Input
+                      id="end-date"
+                      type="date"
+                      value={formData.dateRange.end}
+                      onChange={(e) => handleChange('dateRange', {...formData.dateRange, end: e.target.value})}
+                      className="pl-10 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100"
+                    />
+                    <Mail 
+                      className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-500 cursor-pointer transition-colors"
+                      onClick={() => {
+                        document.getElementById('end-date')?.showPicker?.() || 
+                        document.getElementById('end-date')?.click();
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
 
               {/* 联系人信息 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>收件人</Label>
+                  <Label className="text-gray-900 dark:text-gray-100">收件人</Label>
                   <Input
                     placeholder="请输入收件人姓名"
                     value={formData.recipient}
                     onChange={(e) => handleChange('recipient', e.target.value)}
-                    className="mt-1"
+                    className="mt-1 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
-                  <Label>发件人</Label>
+                  <Label className="text-gray-900 dark:text-gray-100">发件人</Label>
                   <Input
                     placeholder="请输入发件人姓名"
                     value={formData.senderName}
                     onChange={(e) => handleChange('senderName', e.target.value)}
-                    className="mt-1"
+                    className="mt-1 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100"
                   />
                 </div>
               </div>
@@ -401,17 +381,20 @@ const EmailAssistant = () => {
                 placeholder="运营姓名"
                 value={formData.userName}
                 onChange={(e) => handleChange('userName', e.target.value)}
+                className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100"
               />
               <Input
                 placeholder="网红用户名"
                 value={formData.influencerName}
                 onChange={(e) => handleChange('influencerName', e.target.value)}
+                className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100"
               />
               {scenario === 'negotiation' && (
                 <Input
                   placeholder="期望价格"
                   value={formData.expectedPrice}
                   onChange={(e) => handleChange('expectedPrice', e.target.value)}
+                  className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100"
                 />
               )}
               {['followup', 'negotiation'].includes(scenario) && (
@@ -419,6 +402,7 @@ const EmailAssistant = () => {
                   type="date"
                   value={formData.deadline}
                   onChange={(e) => handleChange('deadline', e.target.value)}
+                  className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100"
                 />
               )}
             </div>
@@ -426,7 +410,7 @@ const EmailAssistant = () => {
 
           {/* 生成邮件按钮 */}
           <Button 
-            className="w-full" 
+            className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800" 
             onClick={() => {
               const content = emailTemplates[scenario as keyof typeof emailTemplates](formData);
               setEmailContent(content);
