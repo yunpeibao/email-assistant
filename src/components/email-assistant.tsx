@@ -323,8 +323,10 @@ const EmailAssistant = () => {
                     <Mail 
                       className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-500 cursor-pointer transition-colors"
                       onClick={() => {
-                        document.getElementById('start-date')?.showPicker?.() || 
-                        document.getElementById('start-date')?.click();
+                        const input = document.getElementById('start-date') as HTMLInputElement;
+                        if (input) {
+                          input.click();
+                        }
                       }}
                     />
                   </div>
@@ -342,8 +344,10 @@ const EmailAssistant = () => {
                     <Mail 
                       className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-500 cursor-pointer transition-colors"
                       onClick={() => {
-                        document.getElementById('end-date')?.showPicker?.() || 
-                        document.getElementById('end-date')?.click();
+                        const input = document.getElementById('end-date') as HTMLInputElement;
+                        if (input) {
+                          input.click();
+                        }
                       }}
                     />
                   </div>
