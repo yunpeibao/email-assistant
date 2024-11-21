@@ -196,8 +196,8 @@ const EmailAssistant = () => {
           </div>
           <Button 
             className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
-            onClick={() => {
-              void navigator.clipboard.writeText(emailContent);
+            onClick={async () => {
+              await navigator.clipboard.writeText(emailContent);
             }}
           >
             <Copy className="w-4 h-4 mr-2" />
